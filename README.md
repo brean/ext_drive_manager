@@ -1,2 +1,2 @@
-# ext_drive_manager
-Python tool for linux to manager partions on external drives, create isos and clone them to other drives
+# External Drive Manager
+Python tool for Linux to manager partitions on external drives, create ISOs and clone them to other drives.
