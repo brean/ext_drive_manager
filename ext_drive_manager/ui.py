@@ -1,5 +1,5 @@
 from textual.app import App, ComposeResult
-from textual.widgets import Button, Header, Label, ListView, ListItem
+from textual.widgets import Header, Label, ListView, ListItem, ProgressBar
 from .devices_wrapper import get_device_info
 
 
@@ -18,13 +18,16 @@ class DriveItem(ListItem):
         super().__init__()
         self.dev = dev
 
-    """Entries for one drive."""
     def compose(self) -> ComposeResult:
-        """Create child widgets of a stopwatch."""
+        """Entry for one drive."""
         lbl = f"{self.dev['vendor']} {self.dev['model']}"
         if self.dev.get('size', 0) > 0:
             lbl += f" ({format_size(self.dev['size'])})"
         yield Label(lbl, id="overwrite")
+        yield ProgressBar(total=100, show_eta=False)
+
+    def update_progress(self, progress) -> None:
+        self.query_one(ProgressBar).update(progress=progress)
 
 
 class ExternalDriveManager(App):
