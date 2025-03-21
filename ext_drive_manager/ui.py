@@ -1,7 +1,16 @@
 from textual.app import App, ComposeResult
-from textual.containers import HorizontalGroup
 from textual.widgets import Button, Header, Label, ListView, ListItem
 from .devices_wrapper import get_device_info
+
+
+def format_size(size_bytes: int):
+    """Convert a size in bytes to a human-readable format."""
+    units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    index = 0
+    while size_bytes >= 1024 and index < len(units) - 1:
+        size_bytes /= 1024.0
+        index += 1
+    return f"{size_bytes:.2f} {units[index]}"
 
 
 class DriveItem(ListItem):
@@ -12,9 +21,10 @@ class DriveItem(ListItem):
     """Entries for one drive."""
     def compose(self) -> ComposeResult:
         """Create child widgets of a stopwatch."""
-        yield Label(
-            f"{self.dev['vendor']} {self.dev['model']}",
-            id="overwrite")
+        lbl = f"{self.dev['vendor']} {self.dev['model']}"
+        if self.dev.get('size', 0) > 0:
+            lbl += f" ({format_size(self.dev['size'])})"
+        yield Label(lbl, id="overwrite")
 
 
 class ExternalDriveManager(App):
@@ -23,10 +33,12 @@ class ExternalDriveManager(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
-        drive_list = []
+        drive_list = [DriveItem({'vendor': 'all', 'model': 'devices'})]
         devices = get_device_info()
         for dev in devices.get('blockdevices', []):
             if not dev.get('rm'):
+                continue
+            if dev.get('size', 0) == 0:
                 continue
             drive_list.append(DriveItem(dev))
         yield ListView(*drive_list)
