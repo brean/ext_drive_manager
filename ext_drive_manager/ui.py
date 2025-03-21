@@ -1,7 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.containers import HorizontalGroup
 from textual.widgets import Button, Header, Label, ListView, ListItem
-from devices_wrapper import get_device_info
+from .devices_wrapper import get_device_info
 
 
 class DriveItem(ListItem):
@@ -32,6 +32,10 @@ class ExternalDriveManager(App):
         yield ListView(*drive_list)
 
 
-if __name__ == "__main__":
+def main():
     app = ExternalDriveManager()
     app.run()
+
+
+if __name__ == "__main__":
+    main()
