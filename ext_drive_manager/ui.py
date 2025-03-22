@@ -1,4 +1,5 @@
 from textual.app import App, ComposeResult
+from textual.containers import HorizontalGroup
 from textual.widgets import Header, Label, ListView, ListItem, ProgressBar
 from .devices_wrapper import get_device_info
 
@@ -20,11 +21,20 @@ class DriveItem(ListItem):
 
     def compose(self) -> ComposeResult:
         """Entry for one drive."""
-        lbl = f"{self.dev['vendor']} {self.dev['model']}"
+        lbl = f"{self.dev['vendor']} {self.dev['model']} "
         if self.dev.get('size', 0) > 0:
-            lbl += f" ({format_size(self.dev['size'])})"
-        yield Label(lbl, id="overwrite")
-        yield ProgressBar(total=100, show_eta=False)
+            lbl += f"({format_size(self.dev['size'])}) "
+        part = 0
+        if self.dev.get('children', None):
+            part = len([
+                c for c in self.dev.get('children')
+                if c['type'] == 'part'])
+        yield HorizontalGroup(
+            Label(lbl, id="drive_name"),
+            Label(f'{part} partitions', id="num_parts"),
+            ProgressBar(total=100, show_eta=False),
+            
+        )
 
     def update_progress(self, progress) -> None:
         self.query_one(ProgressBar).update(progress=progress)

@@ -15,6 +15,7 @@ def get_device_info():
             capture_output=True, text=True, check=True
         )
         devices_info = json.loads(result.stdout)
+        print(devices_info)
     except subprocess.CalledProcessError as e:
         print(f"Error running lsblk: {e}")
         return []
