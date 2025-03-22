@@ -1,6 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.containers import HorizontalGroup
-from textual.widgets import Header, Label, ListView, ListItem, ProgressBar, Rule
+from textual.widgets import Header, Label, ListItem, ListView, ProgressBar
+
 from .devices_wrapper import get_device_info
 
 
@@ -35,7 +36,7 @@ class DriveItem(ListItem):
 
 
 def drives_to_table_data(devices):
-    data = [('Device name', 'Size', 'Partitons', 'Action', 'Progress')]
+    data = [('Device name', 'Size', 'Partitions', 'Action', 'Progress')]
     data.append(('all devices', '', '', '(none)', 0))
     for dev in devices.get('blockdevices', []):
         if not dev.get('rm'):
