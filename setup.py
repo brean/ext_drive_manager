@@ -20,8 +20,7 @@ setup(
     package_data={},
     install_requires=[
         'argcomplete',
-        'textual',
-        'textual-cogs'
+        'textual'
     ],
     entry_points={
         'console_scripts': [
