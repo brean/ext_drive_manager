@@ -1,6 +1,6 @@
 from textual.app import App, ComposeResult
 from textual.containers import HorizontalGroup
-from textual.widgets import Header, Label, ListView, ListItem, ProgressBar
+from textual.widgets import Header, Label, ListView, ListItem, ProgressBar, Rule
 from .devices_wrapper import get_device_info
 
 
@@ -15,46 +15,63 @@ def format_size(size_bytes: int):
 
 
 class DriveItem(ListItem):
-    def __init__(self, dev):
+
+    def __init__(self, data):
         super().__init__()
-        self.dev = dev
+        self.data = data
 
     def compose(self) -> ComposeResult:
         """Entry for one drive."""
-        lbl = f"{self.dev['vendor']} {self.dev['model']} "
-        if self.dev.get('size', 0) > 0:
-            lbl += f"({format_size(self.dev['size'])}) "
-        part = 0
-        if self.dev.get('children', None):
-            part = len([
-                c for c in self.dev.get('children')
-                if c['type'] == 'part'])
         yield HorizontalGroup(
-            Label(lbl, id="drive_name"),
-            Label(f'{part} partitions', id="num_parts"),
-            ProgressBar(total=100, show_eta=False),
-            
+            Label(self.data[0], id="drive_name"),
+            Label(self.data[1], id="size"),
+            Label(self.data[2], id="partition"),
+            Label(self.data[3], id="action"),
+            ProgressBar(total=100, show_eta=False, id="progress"),
         )
 
-    def update_progress(self, progress) -> None:
-        self.query_one(ProgressBar).update(progress=progress)
+    def update_progress(self) -> None:
+        self.query_one(ProgressBar).update(progress=self.data[4])
+
+
+def drives_to_table_data(devices):
+    data = [('Device name', 'Size', 'Partitons', 'Action', 'Progress')]
+    data.append(('all devices', '', '', '(none)', 0))
+    for dev in devices.get('blockdevices', []):
+        if not dev.get('rm'):
+            continue
+        if dev.get('size', 0) == 0:
+            continue
+        name = f"{dev['vendor']} {dev['model']}"
+        size = ''
+        if dev.get('size', 0) > 0:
+            size = f" {format_size(dev['size'])}"
+        part = '0'
+        if dev.get('children', None):
+            part = str(len([
+                c for c in dev.get('children')
+                if c['type'] == 'part']))
+        data.append((name, size, part, '(none)', 0))
+    return data
 
 
 class ExternalDriveManager(App):
+    CSS_PATH = 'ui.tcss'
     """A Textual app to manage external drives like SD-cards or USB-Sticks."""
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
-        drive_list = [DriveItem({'vendor': 'all', 'model': 'devices'})]
+        yield ListView()
+
+    def on_mount(self) -> None:
         devices = get_device_info()
-        for dev in devices.get('blockdevices', []):
-            if not dev.get('rm'):
-                continue
-            if dev.get('size', 0) == 0:
-                continue
-            drive_list.append(DriveItem(dev))
-        yield ListView(*drive_list)
+        data = drives_to_table_data(devices)
+
+        list_view = self.query_one(ListView)
+        # list_view.append(DriveListHeader(data[0]))
+        for row in data[1:]:
+            list_view.append(DriveItem(row))
 
 
 def main():
