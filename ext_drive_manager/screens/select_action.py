@@ -11,13 +11,16 @@ class SelectAction(ModalScreen):
         self.data = data
 
     def compose(self) -> ComposeResult:
-        items = []
+        items = [ListItem(Label("Back"), id="back")]
         if not self.data[5]:
             items.append(ListItem(Label("Save drive/partition"), id='save'))
-        items.append(ListItem(
-            Label("Write drive/partition"),
-            id='write', classes="warning"))
-        items.append(ListItem(Label("Back"), id="back"))
+            items.append(ListItem(
+                Label("Write drive/partition"),
+                id='write', classes="warning"))
+        else:
+            items.append(ListItem(
+                Label("Write drives"),
+                id='write', classes="warning"))
         yield ListView(*items, id="dialog")
 
     def on_mount(self) -> None:
