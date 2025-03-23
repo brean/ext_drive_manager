@@ -3,6 +3,7 @@ from textual.containers import HorizontalGroup
 from textual.widgets import Header, Label, ListItem, ListView, ProgressBar
 
 from .devices_wrapper import get_device_info
+from .screens.select_action import SelectAction
 
 
 def format_size(size_bytes: int):
@@ -20,6 +21,7 @@ class DriveItem(ListItem):
     def __init__(self, data):
         super().__init__()
         self.data = data
+        self.drive_select = True
 
     def compose(self) -> ComposeResult:
         """Entry for one drive."""
@@ -36,8 +38,8 @@ class DriveItem(ListItem):
 
 
 def drives_to_table_data(devices):
-    data = [('Device name', 'Size', 'Partitions', 'Action', 'Progress')]
-    data.append(('all devices', '', '', '(none)', 0))
+    data = [('Device name', 'Size', 'Partitions', 'Action', 'Progress', 'All')]
+    data.append(('all devices', '', '', '(none)', 0, True))
     for dev in devices.get('blockdevices', []):
         if not dev.get('rm'):
             continue
@@ -52,11 +54,14 @@ def drives_to_table_data(devices):
             part = str(len([
                 c for c in dev.get('children')
                 if c['type'] == 'part']))
-        data.append((name, size, part, '(none)', 0))
+        data.append((name, size, part, '(none)', 0, False))
     return data
 
 
 class ExternalDriveManager(App):
+    MODES = {
+        "select_action": SelectAction,
+    }
     CSS_PATH = 'ui.tcss'
     """A Textual app to manage external drives like SD-cards or USB-Sticks."""
 
@@ -73,6 +78,14 @@ class ExternalDriveManager(App):
         # list_view.append(DriveListHeader(data[0]))
         for row in data[1:]:
             list_view.append(DriveItem(row))
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if hasattr(event.item, 'drive_select'):
+            self.push_screen(SelectAction(event.item.data))
+        # only if its a drive with at least 2 partitions
+        # only if an action is selected that requires a single partition
+        # self.push_screen(SelectPartition())
+        # else show select ActionDialog
 
 
 def main():
