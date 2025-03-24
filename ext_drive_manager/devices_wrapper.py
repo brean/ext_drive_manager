@@ -29,15 +29,14 @@ if __name__ == "__main__":
     devices = get_device_info()
     print("Device Information:")
     for device in devices.get('blockdevices', []):
-        if not device.get('rm'):
-            continue
-        print(
-            f"Device: {device.get('kname', 'N/A')}, "
-            f"Type: {device.get('type', 'N/A')}, "
-            f"Removable: {device.get('rm', 'N/A')}, "
-            f"Read-Only: {device.get('ro', 'N/A')}, "
-            f"Size: {device.get('size', 'N/A')} bytes, "
-            f"Mount Point: {device.get('mountpoint', 'N/A')}, "
-            f"Label: {device.get('label', 'N/A')}, "
-            f"Vendor: {device.get('vendor', 'N/A')}, "
-            f"Model: {device.get('model', 'N/A')}")
+        if device.get('rm') or device.get('hotplug'):
+            print(
+                f"Device: {device.get('kname', 'N/A')}, "
+                f"Type: {device.get('type', 'N/A')}, "
+                f"Removable: {device.get('rm', 'N/A')}, "
+                f"Read-Only: {device.get('ro', 'N/A')}, "
+                f"Size: {device.get('size', 'N/A')} bytes, "
+                f"Mount Point: {device.get('mountpoint', 'N/A')}, "
+                f"Label: {device.get('label', 'N/A')}, "
+                f"Vendor: {device.get('vendor', 'N/A')}, "
+                f"Model: {device.get('model', 'N/A')}")

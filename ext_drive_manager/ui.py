@@ -40,21 +40,27 @@ class DriveItem(ListItem):
 def drives_to_table_data(devices):
     data = [('Device name', 'Size', 'Partitions', 'Action', 'Progress', 'All')]
     data.append(('all devices', '', '', '(none)', 0, True))
-    for dev in devices.get('blockdevices', []):
-        if not dev.get('rm'):
-            continue
-        if dev.get('size', 0) == 0:
-            continue
-        name = f"{dev['vendor']} {dev['model']}"
-        size = ''
-        if dev.get('size', 0) > 0:
-            size = f" {format_size(dev['size'])}"
-        part = '0'
-        if dev.get('children', None):
-            part = str(len([
-                c for c in dev.get('children')
-                if c['type'] == 'part']))
-        data.append((name, size, part, '(none)', 0, False))
+    for num, dev in enumerate(devices.get('blockdevices', [])):
+        if (dev.get('rm') or dev.get('hotplug')) and dev.get('size', 0) > 0:
+            vendor = None
+            model = None
+            if dev['vendor']:
+                vendor = dev['vendor']
+            if dev['model']:
+                model = dev['model']
+            if vendor or model:
+                name = f"{vendor} {model}"
+            else:
+                name = f'drive #{num+1}'
+            size = ''
+            if dev.get('size', 0) > 0:
+                size = f" {format_size(dev['size'])}"
+            part = '0'
+            if dev.get('children', None):
+                part = str(len([
+                    c for c in dev.get('children')
+                    if c['type'] == 'part']))
+            data.append((name, size, part, '(none)', 0, False))
     return data
 
 
