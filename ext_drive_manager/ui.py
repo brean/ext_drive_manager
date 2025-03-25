@@ -2,18 +2,26 @@ from textual.app import App, ComposeResult
 from textual.containers import HorizontalGroup
 from textual.widgets import Header, Label, ListItem, ListView, ProgressBar
 
-from .devices_wrapper import get_device_info
+from .devices_wrapper import get_device_info, drives_to_table_data
 from .screens.select_action import SelectAction
 
 
-def format_size(size_bytes: int):
-    """Convert a size in bytes to a human-readable format."""
-    units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
-    index = 0
-    while size_bytes >= 1024 and index < len(units) - 1:
-        size_bytes /= 1024.0
-        index += 1
-    return f"{size_bytes:.2f} {units[index]}"
+class ListHeader(ListItem):
+    def __init__(self, data):
+        super().__init__(disabled=True)
+        self.data = data
+        self.drive_select = True
+
+    def compose(self) -> ComposeResult:
+        """Entry for one drive."""
+        yield HorizontalGroup(
+            Label(self.data[0], id="drive_name"),
+            Label(self.data[1], id="size"),
+            Label(self.data[2], id="used"),
+            Label(self.data[3], id="partition"),
+            Label(self.data[4], id="action"),
+            Label(self.data[5], id="progress"),
+        )
 
 
 class DriveItem(ListItem):
@@ -28,40 +36,14 @@ class DriveItem(ListItem):
         yield HorizontalGroup(
             Label(self.data[0], id="drive_name"),
             Label(self.data[1], id="size"),
-            Label(self.data[2], id="partition"),
-            Label(self.data[3], id="action"),
+            Label(self.data[2], id="used"),
+            Label(self.data[3], id="partition"),
+            Label(self.data[4], id="action"),
             ProgressBar(total=100, show_eta=False, id="progress"),
         )
 
     def update_progress(self) -> None:
         self.query_one(ProgressBar).update(progress=self.data[4])
-
-
-def drives_to_table_data(devices):
-    data = [('Device name', 'Size', 'Partitions', 'Action', 'Progress', 'All')]
-    data.append(('all devices', '', '', '(none)', 0, True))
-    for num, dev in enumerate(devices.get('blockdevices', [])):
-        if (dev.get('rm') or dev.get('hotplug')) and dev.get('size', 0) > 0:
-            vendor = None
-            model = None
-            if dev['vendor']:
-                vendor = dev['vendor']
-            if dev['model']:
-                model = dev['model']
-            if vendor or model:
-                name = f"{vendor} {model}"
-            else:
-                name = f'drive #{num+1}'
-            size = ''
-            if dev.get('size', 0) > 0:
-                size = f" {format_size(dev['size'])}"
-            part = '0'
-            if dev.get('children', None):
-                part = str(len([
-                    c for c in dev.get('children')
-                    if c['type'] == 'part']))
-            data.append((name, size, part, '(none)', 0, False))
-    return data
 
 
 class ExternalDriveManager(App):
@@ -82,8 +64,10 @@ class ExternalDriveManager(App):
 
         list_view = self.query_one(ListView)
         # list_view.append(DriveListHeader(data[0]))
+        list_view.append(ListHeader(data[0]))
         for row in data[1:]:
             list_view.append(DriveItem(row))
+        list_view.index = 1
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if hasattr(event.item, 'drive_select'):
