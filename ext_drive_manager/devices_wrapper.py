@@ -78,7 +78,6 @@ def drives_to_table_data(devices):
         size = ''
         if dev.get('size', 0) > 0:
             size = format_size(dev['size'])
-        size = format_size(1024*1023.87)
         used = format_size(get_used(dev))
         part = '0'
         if dev.get('children', None):
