@@ -1,10 +1,4 @@
-import argparse
-from .ui import main as main_ui
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    main_ui()
+from .ui import main
 
 
 if __name__ == "__main__":

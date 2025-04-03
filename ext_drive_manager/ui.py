@@ -1,6 +1,8 @@
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import HorizontalGroup
-from textual.widgets import Header, Label, ListItem, ListView, ProgressBar
+from textual.widgets import \
+    Header, Label, ListItem, ListView, ProgressBar, Footer
 
 from .devices_wrapper import get_device_info, drives_to_table_data
 from .screens.select_action import SelectAction
@@ -29,6 +31,7 @@ class DriveItem(ListItem):
     def __init__(self, data):
         super().__init__()
         self.data = data
+        self.drives = self.data[6]
         self.drive_select = True
 
     def compose(self) -> ComposeResult:
@@ -51,12 +54,16 @@ class ExternalDriveManager(App):
         "select_action": SelectAction,
     }
     CSS_PATH = 'ui.tcss'
+    BINDINGS = [
+        Binding(key="q", action="quit", description="Quit the app"),
+    ]
     """A Textual app to manage external drives like SD-cards or USB-Sticks."""
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
         yield ListView()
+        yield Footer()
 
     def on_mount(self) -> None:
         devices = get_device_info()
@@ -71,11 +78,7 @@ class ExternalDriveManager(App):
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if hasattr(event.item, 'drive_select'):
-            self.push_screen(SelectAction(event.item.data))
-        # only if its a drive with at least 2 partitions
-        # only if an action is selected that requires a single partition
-        # self.push_screen(SelectPartition())
-        # else show select ActionDialog
+            self.push_screen(SelectAction(event.item.drives))
 
 
 def main():

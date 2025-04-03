@@ -13,10 +13,10 @@ SelectAction {
     padding: 0 1;
     width: 60;
     height: 11;
-    border: thick $background 80%;
+    border: $primary;
     background: $surface;
 }
 
 .warning.-highlight {
-    background: yellow;
+    background: $warning;
 }
