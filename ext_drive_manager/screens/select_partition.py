@@ -1,5 +1,5 @@
 from textual.app import ComposeResult
-from textual.containers import HorizontalGroup, VerticalGroup
+from textual.containers import HorizontalGroup
 from textual.screen import ModalScreen
 from textual.widgets import \
     Label, ListItem, ListView
@@ -68,4 +68,5 @@ class SelectPartition(ModalScreen):
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         self.app.pop_screen()
         # kname = event.item.part.kname
-        # TODO: open filename dialog
+        # TODO: open filename/folder selection dialog
+        # TODO: generate .iso-file and yaml-config

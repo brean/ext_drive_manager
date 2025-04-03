@@ -1,7 +1,13 @@
 import json
 import subprocess
 import shutil
+import signal
+import time
 from dataclasses import dataclass
+
+
+DD_PATH = shutil.which('dd')
+LSBLK_PATH = shutil.which('lsblk')
 
 
 def format_size(size_bytes: int):
@@ -75,7 +81,7 @@ class Device:
     # device instance
     dev: dict | None = None
     # Name of current action
-    action: str = '(none)'
+    action: str = '(idle)'
     # progress from 0-100
     progress: int = 0
 
@@ -114,8 +120,30 @@ class Device:
     def used_str(self):
         return format_size(self.used)
 
-    def start_backup(self, partition: str):
-        pass
+    def finish_task(self):
+        self.action = '(idle)'
+        self.progress = 0
+
+    def start_backup(self, partition: Partition, out_file: str, bs=2048):
+        cmd = [
+            DD_PATH, f"if={partition['kname']}", f"of={out_file}", f"bs={bs}",
+            "status=progress"]
+        dd = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        line = ''
+        self.action = 'dd'
+        while dd.poll() is None:
+            # this should run in a thread btw
+            time.sleep(.33333)
+            dd.send_signal(signal.SIGUSR1)
+            if dd.returncode:
+                _, err = dd.communicate()
+                # probably "Permission denied"
+                if err:
+                    print(err.decode('utf-8')[:-1])
+                return self.finish_task()
+            while True:
+                line = dd.stderr.readline()
+                # TODO: parse line with regex to set self.progress
 
 
 def get_device_info():
@@ -124,7 +152,7 @@ def get_device_info():
         # based on https://github.com/raspberrypi/rpi-imager/blob/qml/src/
         # linux/linuxdrivelist.cpp
         result = subprocess.run([
-            'lsblk',
+            LSBLK_PATH,
             '--exclude', '7', '--tree', '--paths', '--json', '--bytes',
             '--output', 'kname,type,subsystems,ro,rm,hotplug,size,'
             'phy-sec,log-sec,label,vendor,model,mountpoint'],
@@ -143,7 +171,8 @@ def get_device_info():
     return [d for d in all_devices if d.is_external_drive]
 
 
-def drives_to_table_data(devices):
+def drives_to_table_data(devices: list):
+    """create a table from device list."""
     data = [(
         'Device name', 'Size', 'Used', 'Pa',
         'Action', 'Progress', 'Devices')]
@@ -159,7 +188,7 @@ def drives_to_table_data(devices):
 
 
 if __name__ == "__main__":
-    devices = get_device_info()
+    _devices = get_device_info()
     print("Device Information:")
-    for device in drives_to_table_data(devices):
-        print(device)
+    for _device in drives_to_table_data(_devices):
+        print(_device)
