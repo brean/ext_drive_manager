@@ -6,8 +6,10 @@ import time
 from dataclasses import dataclass
 
 
+SYNC = shutil.which('sync')
 DD_PATH = shutil.which('dd')
 LSBLK_PATH = shutil.which('lsblk')
+UDISKCTRL = shutil.which('udisksctl')
 
 
 def format_size(size_bytes: int):
@@ -69,15 +71,23 @@ class Partition:
 
 @dataclass
 class Device:
+    # kernel name, e.g. sdX or nvmeX
+    kname: str = ''
     vendor: str = 'unknown'
     model: str = 'unknown'
+    # Human readable Vendor and Model name or number
     name: str = 'unknown drive'
+    # number of the device
     num: int = 0
-    # size in byte
+    # full device size in byte
     size: int = 0
+    # used space on device in byte
     used: int = 0
-    paritions: list | None = None
+    partitions: list | None = None
+    # if the device is removable and hotplugable and has a size bigger than 0
     is_external_drive: bool = False
+    # File system type e.g. vfat or ext4
+    fs_type: str | None = None
     # device instance
     dev: dict | None = None
     # Name of current action
@@ -93,6 +103,7 @@ class Device:
         dev = self.dev
         if not dev:
             return
+        self.kname = dev['kname']
         self.vendor = dev.get('vendor', self.vendor)
         self.model = dev.get('model', self.model)
         if self.vendor != 'unknown' or self.model != 'unknown':
@@ -124,6 +135,23 @@ class Device:
         self.action = '(idle)'
         self.progress = 0
 
+    def unmount(self):
+        subprocess.run(
+            [SYNC], check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL)
+        self.action = 'unmount'
+        self.progress = 0
+        for part in self.partitions:
+            if not part.mountpoint or part.mountpoint == '':
+                continue
+            cmd = [UDISKCTRL, 'unmount', '-b', part.kname,]
+            subprocess.run(
+                cmd, check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+        self.finish_task()
+
     def start_backup(self, partition: Partition, out_file: str, bs=2048):
         cmd = [
             DD_PATH, f"if={partition['kname']}", f"of={out_file}", f"bs={bs}",
@@ -140,10 +168,19 @@ class Device:
                 # probably "Permission denied"
                 if err:
                     print(err.decode('utf-8')[:-1])
-                return self.finish_task()
+                self.finish_task()
+                return
             while True:
-                line = dd.stderr.readline()
-                # TODO: parse line with regex to set self.progress
+                read_line = dd.stderr.readline()
+                if not read_line:
+                    break
+                line = read_line.decode('utf-8')
+                if 'bytes' in line:
+                    progress = int(line.split(' ')[0])
+                    print(progress)
+                    break
+        # DONE!
+        self.finish_task()
 
 
 def get_device_info():
@@ -154,8 +191,8 @@ def get_device_info():
         result = subprocess.run([
             LSBLK_PATH,
             '--exclude', '7', '--tree', '--paths', '--json', '--bytes',
-            '--output', 'kname,type,subsystems,ro,rm,hotplug,size,'
-            'phy-sec,log-sec,label,vendor,model,mountpoint'],
+            '--output', 'name,kname,type,subsystems,ro,rm,hotplug,size,'
+            'phy-sec,log-sec,label,vendor,model,mountpoint,fstype'],
             capture_output=True, text=True, check=True
         )
         devices_info = json.loads(result.stdout)
