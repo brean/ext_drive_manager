@@ -36,8 +36,10 @@ def get_used(dev):
     # We can only get used disk size from mounted devices.
     size = 0
     if dev.get('mountpoint'):
-        _, used, _ = shutil.disk_usage(dev['mountpoint'])
-        size += used
+        mount = dev['mountpoint']
+        if not mount.startswith('/dev') and '[SWAP]' != mount:
+            _, used, _ = shutil.disk_usage(mount)
+            size += used
     if dev.get('children'):
         for child in dev['children']:
             size += get_used(child)
@@ -64,7 +66,7 @@ class Partition:
         self.kname = self.part.get('kname', '')
         self.mountpoint = self.part.get('mountpoint', '')
         self.size = self.part.get('size', 0)
-        if self.mountpoint:
+        if self.mountpoint and self.mountpoint != '[SWAP]':
             _, used, _ = shutil.disk_usage(self.mountpoint)
             self.used = used
 
@@ -202,7 +204,16 @@ def get_device_info():
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
         return []
-    block_devices = devices_info.get('blockdevices', [])
+    block_devices = []
+    for device in devices_info.get('blockdevices', []):
+        if not device.get('mountpoint'):
+            block_devices.append(device)
+        elif device['mountpoint'] != '[SWAP]':
+            block_devices.append(device)
+    print('x'*20)
+    for d in block_devices:
+        print(d['kname'], d['mountpoint'])
+    print('*'*20)
     all_devices = [
         Device(dev=d, num=num) for num, d in enumerate(block_devices)]
     return [d for d in all_devices if d.is_external_drive]
